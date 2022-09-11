@@ -1,0 +1,12 @@
+__pycache__/
+env/
+
+log/*
+uploads/*
+
+!log/.gitkeep
+!uploads/.gitkeep
+
+.env
+gunicorn.py
+wsgi.py
