@@ -1,5 +1,131 @@
 {
     "1": {
+        "columns": [],
+        "column_keys": [],
+        "column_ranges": {
+            "start": "A",
+            "end": "P"
+        },
+        "headers": [
+            [
+                {
+                    "name": "№",
+                    "colspan": 1,
+                    "rowspan": 4
+                },
+                {
+                    "name": "Ҳудудлар номи",
+                    "colspan": 1,
+                    "rowspan": 4
+                },
+                {
+                    "name": "ПҚ-373-сон қарор бўйича \n2022 йилда \nтарқатиш топшириғи, \nга",
+                    "colspan": 1,
+                    "rowspan": 4
+                },
+                {
+                    "name": "Деҳқон хўжалиги учун пахта-ғалла\nеридан захирага қайтган ерлар, га",
+                    "colspan": 1,
+                    "rowspan": 4
+                },
+                {
+                    "name": "Фарқи,\n(+,-)",
+                    "colspan": 1,
+                    "rowspan": 4
+                },
+                {
+                    "name": "Дехқон хўжалиги ташкил этиш учун тайёрланган лотлар ",
+                    "colspan": 2,
+                    "rowspan": 3
+                },
+                {
+                    "name": "Очиқ электрон танлов ғолиблари",
+                    "colspan": 2,
+                    "rowspan": 3
+                },
+                {
+                    "name": "Режага нисбатан фарқи,\n(+,-)",
+                    "colspan": 1,
+                    "rowspan": 3
+                },
+                {
+                    "name": "Савдо майдончасига қўйилиб ғолиб аниқланмаган лотлар ",
+                    "colspan": 2,
+                    "rowspan": 3
+                },
+                {
+                    "name": "Кадастр палатаси томонидан давлат рўйхатидан ўтказилди",
+                    "colspan": 2,
+                    "rowspan": 3
+                },
+                {
+                    "name": "Шундан хориждан қайтган фуқаролар ",
+                    "colspan": 2,
+                    "rowspan": 3
+                }
+            ],
+            [],
+            [],
+            [
+                {
+                    "name": "лот \nсони",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "майдони, \nга",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "лот \nсони",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "майдони, \nга",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "майдони, \nга",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "лот \nсони",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "майдони, \nга",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "лот \nсони",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "майдони, \nга",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "лот \nсони",
+                    "colspan": 1,
+                    "rowspan": 1
+                },
+                {
+                    "name": "майдони, \nга",
+                    "colspan": 1,
+                    "rowspan": 1
+                }
+            ]
+        ]
+    },
+    "2": {
         "columns": [
             {
                 "type": "index"
