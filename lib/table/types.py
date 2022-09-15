@@ -1,10 +1,11 @@
+from datetime import date, datetime
 from json import load
 from openpyxl import (load_workbook)
 from openpyxl.descriptors import Sequence
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.cell_range import MultiCellRange
 from openpyxl.worksheet.worksheet import Worksheet
-from typing import Union
+from typing import Any, Union
 
 from lib.sqlite import SQLite
 from .exceptions import (
@@ -82,20 +83,21 @@ class Table:
         return self._table_data['column_keys']
 
     def _get_column_ranges(self) -> dict:
-        merged_cells: list = self._get_merged_cells()
-        column_ranges: dict = {
-            'min': None,
-            'max': None
-        }
-        workbook: Workbook = load_workbook(f"utils/excel/{self._type}.xlsx")
-        worksheet: Worksheet = workbook["Жами"]
-        columns = worksheet.columns
-        for cell in merged_cells:
-            if str(cell).startswith("A1:"):
-                column_ranges['min'], column_ranges['max'] = [item[0] for item in cell.split(":")]
-        # print(self._table_data['column_ranges'])
-        workbook.close()
-        return column_ranges
+        # merged_cells: list = self._get_merged_cells()
+        # column_ranges: dict = {
+        #     'min': None,
+        #     'max': None
+        # }
+        # workbook: Workbook = load_workbook(f"utils/excel/{self._type}.xlsx")
+        # worksheet: Worksheet = workbook["Жами"]
+        # columns = worksheet.columns
+        # for cell in merged_cells:
+        #     if str(cell).startswith("A1:"):
+        #         column_ranges['min'], column_ranges['max'] = [item[0] for item in cell.split(":")]
+        # # print(self._table_data['column_ranges'])
+        # workbook.close()
+        # return column_ranges
+        return self._table_data['column_ranges']
 
     def _get_data(self) -> dict:
         columns: list = self._get_columns()
@@ -176,15 +178,15 @@ class Table:
         column_ranges = self._get_column_ranges()
         row_ranges = self._get_row_ranges()
         header_data: list = []
-        row = row_ranges['min']
-        while row <= row_ranges['max']:
+        row = row_ranges['start']
+        while row <= row_ranges['end']:
             header_row: list = []
-            column = column_ranges['min']
-            while column <= column_ranges['max']:
+            column = column_ranges['start']
+            while column <= column_ranges['end']:
                 merged_cell = None
                 for cell in merged_cells:
-                    cell_begin, cell_end = cell.split(":")
-                    if str(cell).startswith(f"{column}{row}:") or cell_begin[0] <= column <= cell_end and int(cell_begin[1]) <= row <= int(cell_end[1]):
+                    cell_start, cell_end = cell.split(":")
+                    if str(cell).startswith(f"{column}{row}:") or cell_start[0] <= column <= cell_end and int(cell_start[1]) <= row <= int(cell_end[1]):
                         merged_cell = cell
                         break
                 if merged_cell is not None:
@@ -219,22 +221,22 @@ class Table:
     def _get_row_ranges(self) -> dict:
         merged_cells: list = self._get_merged_cells()
         row_ranges: dict = {
-            'min': None,
-            'max': None
+            'start': None,
+            'end': None
         }
         workbook: Workbook = load_workbook(f"utils/excel/{self._type}.xlsx")
         worksheet: Worksheet = workbook["Жами"]
         for cell in merged_cells:
-            cell_min, cell_max = (item for item in cell.split(":"))
-            if int(cell_min[1:]) > 3 and worksheet[cell_min].value != "Жами":
-                if row_ranges['min'] is None:
-                    row_ranges['min'] = int(cell_min[1:])
+            cell_start, cell_end = (item for item in cell.split(":"))
+            if int(cell_start[1:]) > 3 and worksheet[cell_start].value != "Жами":
+                if row_ranges['start'] is None:
+                    row_ranges['start'] = int(cell_start[1:])
                 else:
-                    row_ranges['min'] = min(row_ranges['min'], int(cell_min[1:]))
-                if row_ranges['max'] is None:
-                    row_ranges['max'] = int(cell_max[1:])
+                    row_ranges['start'] = min(row_ranges['start'], int(cell_start[1:]))
+                if row_ranges['end'] is None:
+                    row_ranges['end'] = int(cell_end[1:])
                 else:
-                    row_ranges['max'] = max(row_ranges['max'], int(cell_max[1:]))
+                    row_ranges['end'] = max(row_ranges['end'], int(cell_end[1:]))
         workbook.close()
         return row_ranges
 
@@ -246,6 +248,24 @@ class Table:
         with open(self._table_resolver, "r", encoding="utf-8") as file:
             return load(file)[self.name]
 
+    def _insert_data(self, file: str, date: date) -> None:
+        workbook: Workbook = load_workbook(file)
+        sheets: list[str] = workbook.sheetnames
+        for sheet in sheets:
+            if sheet == "Жами":
+                continue
+            worksheet: Worksheet = workbook[sheet]
+            column_ranges: dict = self._get_column_ranges()
+            row_ranges: dict = self._get_row_ranges()
+            column = column_ranges['start']
+            row = row_ranges['end'] + 1
+            sql: SQLite = SQLite(f"database/excel/{self._type}.db")
+            while worksheet[f"{column}{row}"].value not in [None, "Жами"]:
+                for i in range(ord(column_ranges['start']) - ord("A"), ord(column_ranges['end']) - ord("A") + 1):
+                    value: Any = worksheet[f"{chr(i + ord('A'))}{row}"].value
+                    sql.insert()
+                row = row_ranges['end'] + 1
+
     def generate(self) -> Union[str, dict]:
         if '_format' not in self.__dict__:
             raise TableAttributeError("Table format is required.")
@@ -255,7 +275,7 @@ class Table:
             data: list = {}
             # data: list = self._get_data()
             return generate_method(headers, data)
-        except:
+        except AttributeError:
             raise TableValueError(f"\"{self._format}\" format is not supported.")
 
     def get_column_ranges(self) -> dict:
