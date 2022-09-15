@@ -21,6 +21,7 @@ def generate_table():
     if kwargs.get('format') == "json":
         return jsonify(generated)
     elif kwargs.get('format') == "html":
-        return render_template("table.html", table=generated)
+        title: str = table.get_title()
+        return render_template("table.html", table=generated, title=title)
     elif kwargs.get('format') == "excel":
         return redirect(url_for("uploads", filename=generated))

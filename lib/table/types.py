@@ -18,23 +18,18 @@ class Table:
 
     def __init__(
         self,
-        name: str = None,
+        type: str = None,
         table_data: str = None,
-        table_resolver: str = None,
         **kwargs
     ) -> None:
-        if name is None:
-            raise TableAttributeError("Table name is required.")
+        if type is None:
+            raise TableAttributeError("Table type is not defined")
         if table_data is None:
             raise TableAttributeError("Table data is required.")
-        if table_resolver is None:
-            raise TableAttributeError("Table resolver is required.")
-        self.name: str = name
+        self._type: str = type
         self._table_data: str = table_data
-        self._table_resolver: str = table_resolver
         for key, value in kwargs.items():
             self.__dict__[f'_{key}'] = value
-        self._type: str = self._get_type()
         self._table_data: dict = self._get_table_data()
     
     def _generate_excel(self, headers: list, data: list) -> str:
@@ -50,15 +45,15 @@ class Table:
             table += "</tr>"
         table += "</thead>"
         table += "<tbody>"
-        # for key in data:
-        #     table += "<tr>"
-        #     for i in range(len(data[key])):
-        #         value = data[key][i]
-        #         if i == 0 and key == 'total':
-        #             table += f"<td colspan='2'>{value}</td>"
-        #         else:
-        #             table += f"<td>{round(value) if isinstance(value, float) else value if value is not None else ''}</td>"
-        #     table += "</tr>"
+        for key in data:
+            table += "<tr>"
+            for i in range(len(data[key])):
+                value = data[key][i]
+                if i == 0 and key == 'total':
+                    table += f"<td colspan='2'>{value}</td>"
+                else:
+                    table += f"<td>{round(value, 1) if isinstance(value, float) else value if value is not None else ''}</td>"
+            table += "</tr>"
         table += "</tbody>"
         table += "</table>"
         return table
@@ -67,9 +62,10 @@ class Table:
         new_data: dict = {}
         index: int = 1
         for key in data:
+            if key == 'total':
+                continue
             new_data[str(index)] = data[key]
             index += 1
-        del index
         new_data['total'] = data['total']
         return {
             'headers': headers,
@@ -79,9 +75,9 @@ class Table:
     def _get_columns(self) -> list:
         return self._table_data['columns']
 
-    def _get_column_keys(self) -> list:
+    def _get_column_keys(self) -> dict:
         return self._table_data['column_keys']
-
+    
     def _get_column_ranges(self) -> dict:
         # merged_cells: list = self._get_merged_cells()
         # column_ranges: dict = {
@@ -129,7 +125,7 @@ class Table:
                     elif type == "name":
                         row.append(district[0])
                     else:
-                        row.append(None)
+                        row.append(0)
                 data[district[1]] = row
             data['total'] = []
             for column in columns:
@@ -139,7 +135,7 @@ class Table:
                 elif type == "name":
                     data['total'].append("Жами")
                 else:
-                    data['total'].append(None)
+                    data['total'].append(0)
             for i in range(len(districts)):
                 district = districts[i]
                 result: list = sql.select(
@@ -150,6 +146,7 @@ class Table:
                 )
                 for item in result:
                     data[district[1]][column_keys[item[0]]] = item[1]
+                    print(data['total'][column_keys[item[0]] - 1], item[1])
                     if data['total'][column_keys[item[0]] - 1] is None:
                         data['total'][column_keys[item[0]] - 1] = item[1]
                     else:
@@ -166,6 +163,10 @@ class Table:
                             data['total'][i - 1] = data[key][i]
                         else:
                             data['total'][i - 1] += data[key][i]
+                index: int = i + 1 if key == 'total' else i
+                if columns[index]['type'] == "diff":
+                    first, second = columns[index]['indexes']
+                    data[key][i] = data[key][first - (1 if key == 'total' else 0)] - data[key][second - (1 if key == 'total' else 0)]
         return data
 
     def _get_headers(self) -> list:
@@ -229,7 +230,7 @@ class Table:
         worksheet: Worksheet = workbook["Жами"]
         for cell in merged_cells:
             cell_start, cell_end = (item for item in cell.split(":"))
-            if int(cell_start[1:]) > 3 and worksheet[cell_start].value != "Жами":
+            if int(cell_start[1:]) > 3 and not worksheet[cell_start].value.startswith("Жами"):
                 if row_ranges['start'] is None:
                     row_ranges['start'] = int(cell_start[1:])
                 else:
@@ -245,27 +246,52 @@ class Table:
         with open(self._table_data, "r", encoding="utf-8") as file:
             return load(file)[self._type]
 
-    def _get_type(self) -> str:
-        with open(self._table_resolver, "r", encoding="utf-8") as file:
-            return load(file)[self.name]
+    def _get_title(self) -> str:
+        sql: SQLite = SQLite(f"database/excel/{self._type}.db")
+        region: str = sql.select(
+            table="region",
+            fields=["name"],
+            where=f"id = {self._region}",
+            first=True
+        )[0]
+        sql.close()
+        return f"{region}{self._table_data['title']}"
 
     def _insert_data(self, file: str, date: date) -> None:
         workbook: Workbook = load_workbook(file)
         sheets: list[str] = workbook.sheetnames
+        with open("utils/regions.json", "r", encoding="utf-8") as file:
+            regions: dict = load(file)
         for sheet in sheets:
             if sheet == "Жами":
                 continue
-            worksheet: Worksheet = workbook[sheet]
-            column_ranges: dict = self._get_column_ranges()
-            row_ranges: dict = self._get_row_ranges()
-            column = column_ranges['start']
-            row = row_ranges['end'] + 1
-            sql: SQLite = SQLite(f"database/excel/{self._type}.db")
-            while worksheet[f"{column}{row}"].value not in [None, "Жами"]:
-                for i in range(ord(column_ranges['start']) - ord("A"), ord(column_ranges['end']) - ord("A") + 1):
-                    value: Any = worksheet[f"{chr(i + ord('A'))}{row}"].value
-                    sql.insert()
+            print(sheet)
+            if sheet in regions:
+                worksheet: Worksheet = workbook[sheet]
+                column_ranges: dict = self._get_column_ranges()
+                row_ranges: dict = self._get_row_ranges()
+                column = column_ranges['start']
                 row = row_ranges['end'] + 1
+                sql: SQLite = SQLite(f"database/excel/{self._type}.db")
+                while worksheet[f"{column}{row}"].value not in [None, "Жами"]:
+                    for i in range(ord(column_ranges['start']) - ord("A") + 2, ord(column_ranges['end']) - ord("A") + 1):
+                        column_keys_reverse: dict = {v: k for k, v in self._table_data['column_keys'].items()}
+                        if i in column_keys_reverse:
+                            district: str = worksheet[f"{chr(ord(column_ranges['start']) + 1)}{row}"].value
+                            value: Any = worksheet[f"{chr(i + ord('A'))}{row}"].value or 0
+                            sql.insert(
+                                table="data",
+                                name=district,
+                                region=regions[sheet],
+                                district=district,
+                                date=date,
+                                key=column_keys_reverse[i],
+                                value=value,
+                            )
+                    row += 1
+                    print(row)
+                sql.close()
+        workbook.close()
 
     def generate(self) -> Union[str, dict]:
         if '_format' not in self.__dict__:
@@ -273,8 +299,7 @@ class Table:
         try:
             generate_method = getattr(self, f"_generate_{self._format}")
             headers: list = self._get_headers()
-            data: list = {}
-            # data: list = self._get_data()
+            data: list = self._get_data()
             return generate_method(headers, data)
         except AttributeError:
             raise TableValueError(f"\"{self._format}\" format is not supported.")
@@ -290,3 +315,9 @@ class Table:
     
     def get_row_ranges(self) -> dict:
         return self._get_row_ranges()
+
+    def get_title(self) -> str:
+        return self._get_title()
+
+    def insert_data(self, file: str, date: date) -> None:
+        self._insert_data(file, date)
