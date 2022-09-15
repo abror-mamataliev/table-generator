@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from json import load
-from openpyxl import (load_workbook)
+from openpyxl import load_workbook
 from openpyxl.descriptors import Sequence
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.cell_range import MultiCellRange
@@ -189,24 +189,25 @@ class Table:
                     if str(cell).startswith(f"{column}{row}:") or cell_start[0] <= column <= cell_end and int(cell_start[1]) <= row <= int(cell_end[1]):
                         merged_cell = cell
                         break
-                if merged_cell is not None:
-                    merged_cell = [item for item in merged_cell.split(":")]
-                    header_row.append({
-                        'name': worksheet[f"{column}{row}"].value,
-                        'colspan': ord(merged_cell[1][0]) - ord(merged_cell[0][0]) + 1,
-                        'rowspan': int(merged_cell[1][1:]) - int(merged_cell[0][1:]) + 1
-                    })
-                else:
-                    header_row.append({
-                        'name': worksheet[f"{column}{row}"].value,
-                        'colspan': 1,
-                        'rowspan': 1
-                    })
+                if worksheet[f"{column}{row}"].value is not None:
+                    if merged_cell is not None:
+                        merged_cell = [item for item in merged_cell.split(":")]
+                        header_row.append({
+                            'name': worksheet[f"{column}{row}"].value,
+                            'colspan': ord(merged_cell[1][0]) - ord(merged_cell[0][0]) + 1,
+                            'rowspan': int(merged_cell[1][1:]) - int(merged_cell[0][1:]) + 1
+                        })
+                    else:
+                        header_row.append({
+                            'name': worksheet[f"{column}{row}"].value,
+                            'colspan': 1,
+                            'rowspan': 1
+                        })
                 column = chr(ord(column) + 1)
-            print(header_row)
             header_data.append(header_row)
             row += 1
         workbook.close()
+        return header_data
 
     def _get_merged_cells(self) -> list:
         workbook: Workbook = load_workbook(f"utils/excel/{self._type}.xlsx")
