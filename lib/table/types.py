@@ -100,7 +100,7 @@ class Table:
         column_keys: list = self._get_column_keys()
         data: list = {}
         sql: SQLite = SQLite(f"database/excel/{self._type}.db")
-        if '_region' in self.__dict__:
+        if '_region' in self.__dict__  and self._region != "all":
             region: str = sql.select(
                 table="region",
                 fields=["name"],
@@ -141,18 +141,57 @@ class Table:
                 result: list = sql.select(
                     table="data",
                     fields=["key", "value"],
-                    where=f"region = '{region}' AND district = '{district[1]}' AND name = '{district[0]}'",
+                    where=f"region = '{region}' AND district = '{district[1]}' AND name = '{district[0]}' and date = '{self._date}'",
                     first=False
                 )
                 for item in result:
                     data[district[1]][column_keys[item[0]]] = item[1]
-                    print(data['total'][column_keys[item[0]] - 1], item[1])
                     if data['total'][column_keys[item[0]] - 1] is None:
                         data['total'][column_keys[item[0]] - 1] = item[1]
                     else:
                         data['total'][column_keys[item[0]] - 1] += item[1]
         else:
-            pass
+            regions: list = sql.select(
+                table="region",
+                order_by="id",
+                first=False
+            )
+            for i in range(len(regions)):
+                region = regions[i]
+                row = []
+                for column in columns:
+                    type = column['type']
+                    if type == "index":
+                        row.append(i + 1)
+                    elif type == "name":
+                        row.append(region[1])
+                    else:
+                        row.append(0)
+                data[region[0]] = row
+            data['total'] = []
+            for column in columns:
+                type = column['type']
+                if type == "index":
+                    continue
+                elif type == "name":
+                    data['total'].append("Жами")
+                else:
+                    data['total'].append(0)
+            for i in range(len(regions)):
+                region = regions[i]
+                result: list = sql.select(
+                    table="data",
+                    fields=["key", "SUM(value)"],
+                    where=f"region = '{region[1]}' and date = '{self._date}'",
+                    group_by="key",
+                    first=False
+                )
+                for item in result:
+                    data[region[0]][column_keys[item[0]]] = item[1]
+                    if data['total'][column_keys[item[0]] - 1] is None:
+                        data['total'][column_keys[item[0]] - 1] = item[1]
+                    else:
+                        data['total'][column_keys[item[0]] - 1] += item[1]
         sql.close()
         for key in data:
             for i in range(len(data[key]) - 1, -1, -1):
@@ -248,12 +287,14 @@ class Table:
 
     def _get_title(self) -> str:
         sql: SQLite = SQLite(f"database/excel/{self._type}.db")
-        region: str = sql.select(
-            table="region",
-            fields=["name"],
-            where=f"id = {self._region}",
-            first=True
-        )[0]
+        region: str = "Қорақалпоғистон Республикаси ва вилоятлар" \
+            if self._region == "all" \
+            else sql.select(
+                table="region",
+                fields=["name"],
+                where=f"id = {self._region}",
+                first=True
+            )[0]
         sql.close()
         return f"{region}{self._table_data['title']}"
 
